@@ -5,7 +5,7 @@
 PKG="james.dsp"
 LOGFILE="$MODPATH/logs/jamesdsp_app_install.log"
 INTERNAL_PATH="/storage/emulated/0/JamesDSPManager.apk"
-TEMP_INSTALL_PATH="/cache/JamesDSPManager.apk"
+TEMP_INSTALL_PATH="/data/local/tmp/JamesDSPManager.apk"
 
 # Method pick
 if [ -x "/system/bin/cmd" ]; then
@@ -26,9 +26,22 @@ done
 # Extra wait just to be sure
 sleep 10
 
+# Grants what the app needs without user interaction:
+# all files access for /sdcard/JamesDSP (Android 11+) and notifications for the service (Android 13+)
+grant_permissions() {
+	API="$(getprop ro.build.version.sdk)"
+	USER_LIST=$($PM_CMD list users | grep -o '{[0-9]*' | grep -o '[0-9]*')
+	for USER_ID in $USER_LIST; do
+		[ "$API" -ge 30 ] && appops set --user "$USER_ID" "$PKG" MANAGE_EXTERNAL_STORAGE allow >> "$LOGFILE" 2>&1
+		[ "$API" -ge 33 ] && $PM_CMD grant --user "$USER_ID" "$PKG" android.permission.POST_NOTIFICATIONS >> "$LOGFILE" 2>&1
+	done
+	echo " -- Permissions granted -- " >> "$LOGFILE"
+}
+
 # Check if installed
-if $PM_CMD list packages | grep -q "$PKG"; then
-	echo " -- App is already installed. Exiting. -- " >> "$LOGFILE"
+if $PM_CMD list packages | grep -qx "package:$PKG"; then
+	echo " -- App is already installed. -- " >> "$LOGFILE"
+	grant_permissions
 	exit 0
 fi
 
@@ -104,6 +117,7 @@ if [ $INSTALL_STATUS -eq 0 ]; then
 		$PM_CMD disable --user "$USER_ID" "$PKG" >/dev/null 2>&1
 		$PM_CMD enable --user "$USER_ID" "$PKG" >/dev/null 2>&1
 	done
+	grant_permissions
 	echo " -- DONE! --" >> "$LOGFILE"
 else
 	echo "Installation is NOT complete <sad panda.jpg>" >> "$LOGFILE"

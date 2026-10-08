@@ -1,37 +1,71 @@
-name: Test Build to Telegram
+name: Build module
 
 on:
   push:
-    branches: [ "tests" ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-notify:
+  build:
     runs-on: ubuntu-latest
     env:
-      ZIP_NAME: ""
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_TO: ${{ secrets.TELEGRAM_TO }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: tests
 
-      - name: Set ZIP Name
+      - name: Bundle latest app build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_REPO: ${{ github.repository_owner }}/RootJamesDSP
         run: |
-          # Generate filename based on current Warsaw time
-          TIME=$(TZ='Europe/Warsaw' date +'%d.%m.%Y-%H%M')
-          echo "ZIP_NAME=JamesDSP-TestBuild_${TIME}.zip" >> $GITHUB_ENV
+          # Replace the bundled ThePBone APK with the newest root build from the app repo, if there is one
+          if gh release download --repo "$APP_REPO" --pattern '*.apk' --dir app-apk; then
+            mv -f app-apk/*.apk common/files/JamesDSPManagerThePBone.apk
+            echo "APP_TAG=$(gh release view --repo "$APP_REPO" --json tagName -q .tagName)" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No app release found in $APP_REPO, keeping the APK from the repo"
+            echo "APP_TAG=APK from repo" >> "$GITHUB_ENV"
+          fi
+          rm -rf app-apk
+
+      - name: Set ZIP name
+        run: |
+          VERSION=$(sed -n 's/^version=//p' module.prop)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "ZIP_NAME=JamesDSP-$VERSION-build.${{ github.run_number }}.zip" >> "$GITHUB_ENV"
 
       - name: Create flat ZIP
         run: |
           # Create a zip archive excluding git configuration files
-          zip -r ${{ env.ZIP_NAME }} . -x "*.git*" "*.github*"
+          zip -r "$ZIP_NAME" . -x "*.git*" "*.github*"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}-build.${{ github.run_number }}
+          name: JamesDSP Manager ${{ env.VERSION }} (build ${{ github.run_number }})
+          target_commitish: ${{ github.sha }}
+          body: |
+            Flash with Magisk, KernelSU, KernelSU Next or APatch.
+
+            Bundled ThePBone app: ${{ env.APP_TAG }}
+            Commit: ${{ github.sha }}
+            See [changelog.md](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/changelog.md) for changes.
+          files: ${{ env.ZIP_NAME }}
+          make_latest: true
 
       - name: Send File to Telegram
+        if: env.TELEGRAM_TOKEN != '' && env.TELEGRAM_TO != ''
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_TO }}
@@ -40,6 +74,6 @@ jobs:
           document: ${{ env.ZIP_NAME }}
           message: |
             🚀 **New test build!**
-            🌿 Branch: `tests`
-            
+            🌿 Branch: `${{ github.ref_name }}`
+
             File ready for download 👇

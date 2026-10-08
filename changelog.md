@@ -1,3 +1,11 @@
+### Unreleased
+
+* 64 bit devices now get the matching 32 bit lib in /lib instead of a copy of the 64 bit one; AIDL devices no longer get a lib there at all
+* Effect lib mount work dir moved out of the module's system folder, so it is no longer mounted into /system
+* App APK is staged in /data/local/tmp instead of /cache, which is missing on many A/B devices
+* All files access and notification permission are granted to the app on every boot
+* Installed app check no longer matches other packages starting with james.dsp
+
 ### v6.5 RC- 12.29.2025
 
 * Created post-fs-data.sh with apex mounting support if needed

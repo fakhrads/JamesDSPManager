@@ -18,7 +18,7 @@ DYNLIB=true
 PARTOVER=true
 PARTITIONS="/odm"
 APPVER=91
-PAPPVER=55
+PAPPVER=56
 
 ##########################################################################################
 # Replace list

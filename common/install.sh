@@ -105,7 +105,11 @@ else
   
 fi
 
-cp_ch "$MODPATH/common/files/$QARCH/libjamesdsp.so" "$MODPATH/system/lib/soundfx/libjamesdsp.so"
+# 32-bit audio processes on 64-bit HIDL devices need a lib matching their own arch;
+# the AIDL lib is 64-bit only and 32-bit installs already placed theirs above
+if [ "$QARCH" = "arm64" ] && [ -f "$MODPATH/common/files/$ARCH32/libjamesdsp.so" ]; then
+	cp_ch "$MODPATH/common/files/$ARCH32/libjamesdsp.so" "$MODPATH/system/lib/soundfx/libjamesdsp.so"
+fi
 
 set +x
 # App only works when installed normally to data in oreo+

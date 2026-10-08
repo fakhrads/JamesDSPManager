@@ -22,7 +22,8 @@ EFFECT_LIBS="libjamesdsp.so"
 mount_effect_lib(){
 	local SYS_TARGET="$1"
 	local MOD_SOURCE_DIR="$2"
-	local WORK_DIR="$MODPATH/system/effect_mount$SYS_TARGET"
+	# kept outside $MODPATH/system, otherwise the root manager would also mount it into /system
+	local WORK_DIR="$MODPATH/effect_mount$SYS_TARGET"
 	
 	[ ! -d "$SYS_TARGET" ] && return
 	
@@ -83,6 +84,9 @@ mount_apex(){
 		done
 	fi
 }
+
+# leftover from older versions, which kept the work dir inside the module's system folder
+rm -rf "$MODPATH/system/effect_mount"
 
 mount_vendor
 mount_apex
