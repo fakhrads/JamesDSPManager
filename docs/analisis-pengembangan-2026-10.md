@@ -113,11 +113,12 @@ Dari output ini kelihatan versi effect HAL yang dipakai vendor, versi yang dipil
 
 ## 6. Hasil tes di device (11 Okt 2026)
 
-Device: POCO F7 (`onyx`), crDroid 13 (Android 17, SDK 37), vendor HyperOS 3.0.7 (Android 15), KernelSU. Dites lewat wireless adb.
+Device: POCO F7 (`onyx`), crDroid 13 (Android 17, SDK 37), blob vendor dari HyperOS OS3.0.7.0.WOLMIXM (HyperOS 3, Android 16, patch Februari 2026; string fingerprint-nya nulis 15, tapi kode `W` di nomor build itu Android 16), KernelSU. Dites lewat wireless adb.
 
 - **JamesDSP jalan.** Di `dumpsys media.audio_flinger`, efek `f27317f4-...` nempel di output `AUDIO_DEVICE_OUT_BLUETOOTH_A2DP` dengan state ACTIVE, ngolah float 48 kHz.
 - **Effect HAL-nya V2, bukan V4.** `/system` punya `audio.effect-V4`, tapi HAL Qualcomm (`libaudioeffecthal.qti.so` di proses `audiohalservice.qti`) link ke `audio.effect-V2` dan `common.types-V3` dari `/vendor`. Jadi buat ROM custom di atas vendor lama, yang nentuin itu versi vendor, bukan versi Android-nya. Lib AIDL V2 di modul pas buat device ini.
 - **Bug `patch.sh` kebukti.** Lib di-patch dari `common.types-V3` ke `V5`, padahal V3 ada di vendor. Proses HAL jadi muat types V2, V3, dan V5 barengan. Sekarang udah dibenerin: dependency cuma diganti kalau versi aslinya nggak ada di `/vendor/lib64` atau `/odm/lib64`, dan lib dipulihin dari salinan asli (`tools/libjamesdsp-aidl.so`) setiap boot. Udah dites di device untuk dua kasus, versi ada dan versi hilang.
+- **Effect HAL tetap V2 walaupun blob-nya udah Android 16.** Device ini rilis dengan Android 15 (`ro.board.first_api_level=202404`), dan aturan vendor freeze Google ngebolehin vendor tetap pakai versi HAL waktu rilis. Framework Android 17 nerima effect V1 sampai V4. Per Oktober 2026, POCO F7 belum punya HyperOS 4 (Android 17) stable, baru beta (OS4.0.0.2.XOLMIXM). Kalau nanti ROM pindah ke blob HyperOS 4, cek ulang versi HAL-nya.
 - Spatializer nggak didukung di device ini, jadi jalur bypass lewat spatializer nggak berlaku.
 - Earbud nyambung lewat A2DP (LDAC/aptX HD tersedia), bukan LE Audio.
 - Ada satu instance JamesDSP nyangkut di "Orphan Effect Chains" dari sesi audio yang udah ditutup. Ini kebocoran kecil di app yang perlu dikejar.
