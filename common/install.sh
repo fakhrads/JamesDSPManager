@@ -111,6 +111,11 @@ if [ "$QARCH" = "arm64" ] && [ -f "$MODPATH/common/files/$ARCH32/libjamesdsp.so"
 	cp_ch "$MODPATH/common/files/$ARCH32/libjamesdsp.so" "$MODPATH/system/lib/soundfx/libjamesdsp.so"
 fi
 
+# Untouched copy of the AIDL lib, patch.sh starts from it on every boot
+if [ "$QARCH" = "aidl" ]; then
+	cp -f "$MODPATH/common/files/aidl/libjamesdsp.so" "$MODPATH/tools/libjamesdsp-aidl.so"
+fi
+
 set +x
 # App only works when installed normally to data in oreo+
 INSVER=$(cmd package list packages -3 --show-versioncode  2>/dev/null | grep james.dsp | sed 's/.*versionCode://')

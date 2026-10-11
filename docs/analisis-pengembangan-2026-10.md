@@ -111,10 +111,21 @@ logcat -d | grep -iE 'jamesdsp|EffectFactory|AHAL_' | tail -80
 
 Dari output ini kelihatan versi effect HAL yang dipakai vendor, versi yang dipilih `patch.sh`, dan apakah AudioFlinger beneran muat efek JamesDSP.
 
-## 6. Urutan kerja yang disaranin
+## 6. Hasil tes di device (11 Okt 2026)
 
-1. Ambil data dari HP (bagian 5).
-2. Benerin `patch.sh` biar milih versi sesuai NEEDED dari HAL vendor (P0, kecil).
+Device: POCO F7 (`onyx`), crDroid 13 (Android 17, SDK 37), vendor HyperOS 3.0.7 (Android 15), KernelSU. Dites lewat wireless adb.
+
+- **JamesDSP jalan.** Di `dumpsys media.audio_flinger`, efek `f27317f4-...` nempel di output `AUDIO_DEVICE_OUT_BLUETOOTH_A2DP` dengan state ACTIVE, ngolah float 48 kHz.
+- **Effect HAL-nya V2, bukan V4.** `/system` punya `audio.effect-V4`, tapi HAL Qualcomm (`libaudioeffecthal.qti.so` di proses `audiohalservice.qti`) link ke `audio.effect-V2` dan `common.types-V3` dari `/vendor`. Jadi buat ROM custom di atas vendor lama, yang nentuin itu versi vendor, bukan versi Android-nya. Lib AIDL V2 di modul pas buat device ini.
+- **Bug `patch.sh` kebukti.** Lib di-patch dari `common.types-V3` ke `V5`, padahal V3 ada di vendor. Proses HAL jadi muat types V2, V3, dan V5 barengan. Sekarang udah dibenerin: dependency cuma diganti kalau versi aslinya nggak ada di `/vendor/lib64` atau `/odm/lib64`, dan lib dipulihin dari salinan asli (`tools/libjamesdsp-aidl.so`) setiap boot. Udah dites di device untuk dua kasus, versi ada dan versi hilang.
+- Spatializer nggak didukung di device ini, jadi jalur bypass lewat spatializer nggak berlaku.
+- Earbud nyambung lewat A2DP (LDAC/aptX HD tersedia), bukan LE Audio.
+- Ada satu instance JamesDSP nyangkut di "Orphan Effect Chains" dari sesi audio yang udah ditutup. Ini kebocoran kecil di app yang perlu dikejar.
+
+## 7. Urutan kerja yang disaranin
+
+1. ~~Ambil data dari HP~~ dan ~~benerin `patch.sh`~~ (selesai, lihat bagian 6).
+2. Tes di device lain yang vendor-nya beneran Android 17 (V4), misalnya Pixel.
 3. Siapin pipeline build lib AIDL V3 dan V4 dari AOSP `android17-release`, lalu `install.sh` pilih lib sesuai versi HAL.
 4. Merge upstream app (PEQ dan convolver per sample rate), naikin versi app ke 1.6.17.
 5. Naikin `targetSdk` setelah PR #351 masuk upstream, atau port sendiri.

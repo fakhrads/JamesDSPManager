@@ -5,6 +5,8 @@
 * App APK is staged in /data/local/tmp instead of /cache, which is missing on many A/B devices
 * All files access and notification permission are granted to the app on every boot
 * Installed app check no longer matches other packages starting with james.dsp
+* AIDL lib dependencies are only rewritten when the version it was built against is missing from vendor; it used to always take the newest one (e.g. common.types V3 -> V5 next to a V2 effect HAL)
+* AIDL lib is restored from an untouched copy on every boot, so earlier patching no longer sticks
 
 ### v6.5 RC- 12.29.2025
 
