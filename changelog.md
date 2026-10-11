@@ -7,6 +7,7 @@
 * Installed app check no longer matches other packages starting with james.dsp
 * AIDL lib dependencies are only rewritten when the version it was built against is missing from vendor; it used to always take the newest one (e.g. common.types V3 -> V5 next to a V2 effect HAL)
 * AIDL lib is restored from an untouched copy on every boot, so earlier patching no longer sticks
+* All files access grant no longer fails with "Failed transaction": selinux kept system_server from writing the command output to the module log
 
 ### v6.5 RC- 12.29.2025
 

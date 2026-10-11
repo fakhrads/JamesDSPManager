@@ -26,14 +26,24 @@ done
 # Extra wait just to be sure
 sleep 10
 
+# cmd services run inside system_server, which selinux won't let write to a log under /data/adb,
+# so the call fails with "Failed transaction" when its output is redirected there. Capture it instead.
+run_logged() {
+	OUTPUT=$("$@" 2>&1)
+	RESULT=$?
+	[ -n "$OUTPUT" ] && echo "$OUTPUT" >> "$LOGFILE"
+	[ $RESULT -ne 0 ] && echo " -- Failed ($RESULT): $* -- " >> "$LOGFILE"
+	return $RESULT
+}
+
 # Grants what the app needs without user interaction:
 # all files access for /sdcard/JamesDSP (Android 11+) and notifications for the service (Android 13+)
 grant_permissions() {
 	API="$(getprop ro.build.version.sdk)"
 	USER_LIST=$($PM_CMD list users | grep -o '{[0-9]*' | grep -o '[0-9]*')
 	for USER_ID in $USER_LIST; do
-		[ "$API" -ge 30 ] && appops set --user "$USER_ID" "$PKG" MANAGE_EXTERNAL_STORAGE allow >> "$LOGFILE" 2>&1
-		[ "$API" -ge 33 ] && $PM_CMD grant --user "$USER_ID" "$PKG" android.permission.POST_NOTIFICATIONS >> "$LOGFILE" 2>&1
+		[ "$API" -ge 30 ] && run_logged appops set --user "$USER_ID" "$PKG" MANAGE_EXTERNAL_STORAGE allow
+		[ "$API" -ge 33 ] && run_logged $PM_CMD grant --user "$USER_ID" "$PKG" android.permission.POST_NOTIFICATIONS
 	done
 	echo " -- Permissions granted -- " >> "$LOGFILE"
 }
@@ -52,7 +62,7 @@ install_apk() {
 
 	echo "--- Installing JDSP app from: $source_file ---" >> "$LOGFILE"
 
-	echo " -- Copying $source_file to /cache -- " >> "$LOGFILE"
+	echo " -- Copying $source_file to $TEMP_INSTALL_PATH -- " >> "$LOGFILE"
 	cp "$source_file" "$TEMP_INSTALL_PATH"
 	chmod 644 "$TEMP_INSTALL_PATH"
 	chcon u:object_r:apk_data_file:s0 "$TEMP_INSTALL_PATH" 2>/dev/null
